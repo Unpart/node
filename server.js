@@ -1,12 +1,13 @@
 const express = require('express')
 const app = express()
+const { MongoClient, ObjectId } = require('mongodb');
+const methodOverride = require('method-override')
 
+app.use(methodOverride('_method'))
 app.use(express.static(__dirname + '/public'))
 app.set('view engine', 'ejs')
 app.use(express.json()) 
 app.use(express.urlencoded({extended:true}))
-
-const { MongoClient, ObjectId } = require('mongodb');
 
 let db;
 const url = 'mongodb+srv://admin:lojKpBMQj180JP3k@cluster0.b2rvj.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; // 내 몽고DB 주소 
@@ -75,4 +76,15 @@ app.get('/detail/:id', async(요청, 응답) => {
     console.log(e)
     응답.status(404).send('이상한 url 입력함')
   }
+})
+
+app.get('/edit/:id', async (요청,응답) => { //:는 url 파라미터 문법
+  let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id) })
+  응답.render('edit.ejs', {result : result})
+})
+
+app.put('/edit', async (요청,응답) => { //:는 url 파라미터 문법
+  let result = await db.collection('post').updateOne({ _id : new ObjectId(요청.body.id) }, { $set : { title : 요청.body.title, content : 요청.body.content}})
+  console.log(result)
+  응답.redirect('/list')
 })
