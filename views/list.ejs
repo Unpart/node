@@ -13,10 +13,45 @@
   <div class="white-bg">
     <% for (let i = 0; i < posts.length; i++){ %> 
     <div class="list-box">
-      <h4><a href="/detail/<%= posts[i]._id %>"><%= posts[i].title %></a><a href="/edit/<%= posts[i]._id %>">✏️</a></h4>  
+      <h4>
+        <a href="/detail/<%= posts[i]._id %>"><%= posts[i].title %></a>
+        <a href="/edit/<%= posts[i]._id %>">✏️</a>
+        <span class="delete" data-id="<%= posts[i]._id %>">🗑️</span>
+      </h4>  
       <p><%= posts[i].content %></p>
     </div>
     <% } %>
   </div> 
+
+  <button><a href="/list/next/<%= posts[posts.length-1]._id %>">다음</a></button> 
+
+  <script>
+    for (let i = 0; i < '<%= posts.length %>'; i++){
+        document.querySelectorAll('.delete')[i].addEventListener('click', function(e){
+        fetch('/delete?docid=' + e.target.dataset.id, {
+          method : 'DELETE'
+        })
+        .then((r)=>r.text())
+        .then((r)=>{
+          e.target.parentElement.parentElement.style.display = 'none'
+        })
+      })
+    }
+
+/*    fetch('/URL')
+    .then((r)=>{
+     if(r.status == 200) {
+      return r.json()
+      } else {
+        //서버가 에러코드전송시 실행할코드
+      }
+    })
+    .then((result)=>{ 
+      //성공시 실행할코드
+    }).catch((error)=>{
+      //인터넷문제 등으로 실패시 실행할코드
+      console.log(error)
+    })  */
+  </script>
 </body>
 </html>
