@@ -29,6 +29,27 @@ app.use(session({
 }))
 app.use(passport.session()) 
 
+const { S3Client } = require('@aws-sdk/client-s3')
+const multer = require('multer')
+const multerS3 = require('multer-s3')
+const s3 = new S3Client({
+  region : 'ap-northeast-2',
+  credentials : {
+      accessKeyId : process.env.S3_KEY,
+      secretAccessKey : process.env.S3_SECRET
+  }
+})
+
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: 'unpartforum',
+    key: function (요청, file, cb) {
+      cb(null, Date.now().toString()) //업로드시 파일명 변경가능
+    }
+  })
+})
+
 passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) => {
   let result = await db.collection('user').findOne({ username : 입력한아이디})
   if (!result) {
@@ -56,9 +77,10 @@ passport.deserializeUser(async (user, done) => {
   })
 })
 
+let connectDB = require('./database.js')
+
 let db;
-const url = process.env.DB_URL; // 내 몽고DB 주소 
-new MongoClient(url).connect().then((client)=>{
+connectDB.then((client)=>{
   console.log('DB연결성공')
   db = client.db('forum');
   app.listen(process.env.PORT, () => {
@@ -70,7 +92,6 @@ new MongoClient(url).connect().then((client)=>{
 
 // function checkLogin(요청, 응답, next) {
 //   if (!요청.user) {
-//     응답.send('로그인하세요')
 //     응답.redirect('/login')
 //   }
 //   next()
@@ -95,8 +116,9 @@ app.get('/about', (요청,응답) => {
 })
 
 app.get('/list', async (요청, 응답) => {
-  let result = await db.collection('post').find().toArray() // await은 바로 다음줄을 실행하지 말고 잠깐 기다려 달라는 뜻이다.
-  응답.render('list.ejs', { posts : result })
+  // let result = await db.collection('post').find().toArray() // await은 바로 다음줄을 실행하지 말고 잠깐 기다려 달라는 뜻이다.
+  // 응답.render('list.ejs', { posts : result })
+  응답.redirect('/list/1')
 })
 
 app.get('/time', async (요청, 응답) => {
@@ -107,13 +129,15 @@ app.get('/write', (요청, 응답) => {
   응답.render('write.ejs')
 }) 
 
-app.post('/add', async (요청, 응답) => {
+app.post('/add', upload.single('img1'), async (요청, 응답) => {
   try {
     if (요청.body.title == '' || 요청.body.content == '') {
       응답.send('입력 안했는데?')
     } else {
-      await db.collection('post').insertOne({title: 요청.body.title, content: 요청.body.content})
-      응답.redirect('/list')
+      await db.collection('post').insertOne({
+        title: 요청.body.title, content: 요청.body.content, img : 요청.file.location 
+      })
+      응답.redirect('/list/1')
     }
   } catch(e) {
     console.log(e)
@@ -125,7 +149,7 @@ app.get('/detail/:id', async(요청, 응답) => {
   try {
     let result = await db.collection('post').findOne({ _id : new ObjectId(요청.params.id) })
     응답.render('detail.ejs', {result : result})
-    if (reuslt == null) {
+    if (result == null) {
       응답.status(404).send('이상한 url 입력함')
     }
   } catch(e) {
@@ -141,7 +165,7 @@ app.get('/edit/:id', async (요청,응답) => { //:는 url 파라미터 문법
 
 app.put('/edit', async (요청,응답) => { //:는 url 파라미터 문법
   let result = await db.collection('post').updateOne({ _id : new ObjectId(요청.body.id) }, { $set : { title : 요청.body.title, content : 요청.body.content}})
-  응답.redirect('/list')
+  응답.redirect('/list/1')
 })
 
 app.delete('/delete', async (요청,응답)=> {
@@ -188,3 +212,6 @@ app.post('/register', async (요청, 응답) => {
   })
   응답.redirect('/')
 })
+
+app.use('/shop', require('./routes/shop.js'))
+app.use('/board/sub', require('./routes/sub.js'))
