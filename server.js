@@ -68,17 +68,17 @@ new MongoClient(url).connect().then((client)=>{
   console.log(err)
 })
 
-function checkLogin(요청, 응답, next) {
-  if (!요청.user) {
-    응답.send('로그인하세요')
-    응답.redirect('/login')
-  }
-  next()
-}
+// function checkLogin(요청, 응답, next) {
+//   if (!요청.user) {
+//     응답.send('로그인하세요')
+//     응답.redirect('/login')
+//   }
+//   next()
+// }
 
-app.use(checkLogin)
+// app.use(checkLogin)
 
-app.get('/', checkLogin ,(요청, 응답) => {
+app.get('/' ,(요청, 응답) => {
   응답.render('../index.ejs')
 }) 
 
