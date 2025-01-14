@@ -116,9 +116,8 @@ app.get('/about', (요청,응답) => {
 })
 
 app.get('/list', async (요청, 응답) => {
-  // let result = await db.collection('post').find().toArray() // await은 바로 다음줄을 실행하지 말고 잠깐 기다려 달라는 뜻이다.
-  // 응답.render('list.ejs', { posts : result })
-  응답.redirect('/list/1')
+  let result = await db.collection('post').find().toArray() // await은 바로 다음줄을 실행하지 말고 잠깐 기다려 달라는 뜻이다.
+  응답.render('list.ejs', { posts : result })
 })
 
 app.get('/time', async (요청, 응답) => {
@@ -215,3 +214,15 @@ app.post('/register', async (요청, 응답) => {
 
 app.use('/shop', require('./routes/shop.js'))
 app.use('/board/sub', require('./routes/sub.js'))
+
+app.get('/search', async (요청, 응답) => {
+  console.log(요청.query.val)
+  let searching = [
+    {$search : {
+      index : 'title_index',
+      text : { query : '요청.query.val', path : 'title' }
+    }}
+  ]
+  let result = await db.collection('post').aggregate( searching ).toArray()
+  응답.render('search.ejs', { posts : result })
+})
