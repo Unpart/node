@@ -18,13 +18,14 @@ const LocalStrategy = require('passport-local')
 
 app.use(passport.initialize())
 app.use(session({
-  secret: '암호화에 쓸 비번',
+  secret: 'asdas',
   resave : false,
   saveUninitialized : false,
   cookie : { maxAge : 60 * 60 * 1000 },
   store : MongoStore.create({
     mongoUrl : process.env.DB_URL,
-    dbName : 'forum'
+    dbName : 'forum',
+    ttl : 60 * 60
   })
 }))
 app.use(passport.session()) 
@@ -64,14 +65,14 @@ passport.use(new LocalStrategy(async (입력한아이디, 입력한비번, cb) =
 }))
 
 passport.serializeUser((user, done) => {
-  console.log(user)
   process.nextTick(() => {
-    done(null, { id : user.id, username : user.username })
+    done(null, { id: user._id, username: user.username })
   })
 })
 
 passport.deserializeUser(async (user, done) => {
   let result = await db.collection('user').findOne({_id : new ObjectId(user.id) })
+  delete result.password
   process.nextTick(() => {
     return done(null, result)
   })
@@ -134,9 +135,13 @@ app.post('/add', upload.single('img1'), async (요청, 응답) => {
       응답.send('입력 안했는데?')
     } else {
       await db.collection('post').insertOne({
-        title: 요청.body.title, content: 요청.body.content, img : 요청.file.location 
+        title: 요청.body.title,
+        content: 요청.body.content,
+        img : 요청.file ? 요청.file.location : '',
+        user : 요청.user._id,
+        username : 요청.user.username
       })
-      응답.redirect('/list/1')
+      응답.redirect('/list')
     }
   } catch(e) {
     console.log(e)
@@ -164,12 +169,15 @@ app.get('/edit/:id', async (요청,응답) => { //:는 url 파라미터 문법
 
 app.put('/edit', async (요청,응답) => { //:는 url 파라미터 문법
   let result = await db.collection('post').updateOne({ _id : new ObjectId(요청.body.id) }, { $set : { title : 요청.body.title, content : 요청.body.content}})
-  응답.redirect('/list/1')
+  응답.redirect('/list')
 })
 
 app.delete('/delete', async (요청,응답)=> {
   console.log(요청.query)
-  await db.collection('post').deleteOne({ _id : new ObjectId(요청.query.docid) })
+  await db.collection('post').deleteOne({ 
+    _id : new ObjectId(요청.query.docid),
+    user : new ObjectId(요청.user._id)
+  })
   응답.send('삭제완료')
 })
 
